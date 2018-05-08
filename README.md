@@ -1,3 +1,6 @@
+Updating codebase for Vwallet.
+
+
 Jaxx Codebase
 =============
 
