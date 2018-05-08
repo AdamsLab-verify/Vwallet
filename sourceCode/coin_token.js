@@ -1,29 +1,18 @@
+
 /*
-
-
 The DAO:
-
 There's the usage of the HD wallet structure, when individual transactions come in they are checked for categories of voting or transferring, and placed in their respective array.
-
-
 Transferring:
-
 When a send occurs, the transferable addresses, highest value to lowest, are checked for a proper balance.
-
 From here, there are two options: the first is that the transferable address could forward balances to another internal transferable address, in which case the address would have a balance and the sending could be from that. This would have a degree of latency to the transaction as the sweep phase would need to be completed ("cleared") before the actual transaction could be sent out.
-
 The second, which is being implemented here, is that the highest valued index that has the balance available is used. If that isn't enough, more nodes with lower valued indexes are used. While not taking additional time to clear, this has the side effect that multiple large to small transferable addresses are necessarily compiled and sent with larger transaction fees than you'd need for one transaction.
-
 Voting:
-
 There are many options here, and no explicit "right" way of doing things, so we're minimizing user friction as the goal of these algorithms.
-
-
 There is an explicit constraint currently with the 1.0 DAO code, where you cannot vote with dao tokens unless there is an ethereum balance available on the token's associated address.
-
 */
 
-var CoinToken = function() {
+var CoinToken = function() 
+{
     this._tokenName = "";
     this._tokenSymbol = "";
     this._tokenCoinType = 0;
@@ -71,6 +60,7 @@ CoinToken.TheDAO = 0;
 CoinToken.Augur = 1;
 CoinToken.numCoinTokens = 2;
 
+//Assigning Coin types to Ethereum
 //@note: gets the coin type that holds this token.
 CoinToken.getTokenCoinHolderType = function(tokenType) {
     if (tokenType === CoinToken.TheDAO) {
@@ -79,7 +69,7 @@ CoinToken.getTokenCoinHolderType = function(tokenType) {
         return COIN_ETHEREUM;
     }
 }
-
+//Creating CoinTokenTypeList
 //@note: gets all token types that are held by this coin type.
 CoinToken.getCoinTypeTokenList = function(coinType) {
     var tokenTypeList = [];
@@ -92,7 +82,7 @@ CoinToken.getCoinTypeTokenList = function(coinType) {
 
     return tokenTypeList;
 }
-
+//Mapping Token To MainType into TheDao and Augur
 //@note: returns the main COIN_THEDAO_ETHEREUM type mapping for this token type.
 CoinToken.getTokenToMainTypeMap = function(tokenType) {
     if (tokenType === CoinToken.TheDAO) {
@@ -101,7 +91,7 @@ CoinToken.getTokenToMainTypeMap = function(tokenType) {
         return COIN_AUGUR_ETHEREUM;
     }
 }
-
+//MApping MainType to Token into TheDAO and Augur
 //@note: returns the token type for this main COIN_THEDAO_ETHEREUM type mapping.
 CoinToken.getMainTypeToTokenMap = function(mainType) {
 //    console.log("token type for main coin type :: " + coinType);
@@ -111,12 +101,13 @@ CoinToken.getMainTypeToTokenMap = function(mainType) {
         return CoinToken.Augur;
     }
 }
-
+//According to value of maintype assign the TokenTypeHolder
 //@note: returns the coin type that holds this token, for this main COIN_THEDAO_ETHEREUM type mapping.
 CoinToken.getMainTypeToTokenCoinHolderTypeMap = function(mainType) {
     return CoinToken.getTokenCoinHolderType(CoinToken.getMainTypeToTokenMap(mainType));
 }
 
+//
 CoinToken.getStaticTokenImplementation = function(tokenType) {
     //@note: @here: @token: this seems necessary.
     if (tokenType === CoinToken.TheDAO) {
@@ -126,6 +117,7 @@ CoinToken.getStaticTokenImplementation = function(tokenType) {
     }
 }
 
+//Identifying the Token Type of any New Coin
 //CoinToken.getStaticCoinWorkerImplementation = function(coinType) {
 //}
 
@@ -144,7 +136,7 @@ CoinToken.prototype.txLog = function(logString) {
         console.log(logString);
     }
 }
-
+//Conversion of FiatAmount according to CoinUnit Type
 CoinToken.prototype.convertFiatToCoin = function(fiatAmount, coinUnitType) {
     var coinAmount = 0;
 
@@ -155,7 +147,8 @@ CoinToken.prototype.convertFiatToCoin = function(fiatAmount, coinUnitType) {
 
     return coinAmount;
 }
-
+//Initializing all the parameters for the coin based on the information passed on to the function
+//For the initialing process this function calls many functions within itself with the required parameters
 CoinToken.prototype.initialize = function(tokenName, tokenSymbol, tokenCoinType, baseReceiveAddress, coinHolderWallet, gasPrice, gasLimit, storageKey) {
     console.log("[ Initializing  " + tokenName + " token ]");
     this._tokenName = tokenName;
@@ -189,7 +182,10 @@ CoinToken.prototype.shutDown = function() {
         });
     }
 }
+//Define transactioncahe from the available cointype information defined above.
 
+
+//Then parse if valid transaction cache and identify which of  them have been updated
 CoinToken.prototype.getPouchFoldImplementation = function() {
     return this._tokenImpl;
 }
@@ -209,7 +205,7 @@ CoinToken.prototype.loadAndCache = function() {
 //        }
 //    }
 }
-
+//Setup new Worker and determining action of the worker- log and update 
 CoinToken.prototype.setupWorkers = function() {
     try {
         this._worker = new Worker('./js/wallet/token/coin_token_worker.js');
@@ -447,6 +443,7 @@ CoinToken.prototype.setupWorkers = function() {
     }
 }
 
+//To determine if the CoinToken is transferrable 
 CoinToken.prototype.setIsTransferable = function(transferableList) {
 
     //@note: @here: @todo: check for deltas
@@ -470,7 +467,7 @@ CoinToken.prototype.setIsTransferable = function(transferableList) {
         });
     }
 }
-
+//If the CoinType is Votable
 CoinToken.prototype.setIsVotable = function(votableList) {
 
     //@note: @here: @todo: check for deltas
@@ -535,7 +532,7 @@ CoinToken.prototype.getTransferableBalance = function() {
 
     return totalBalance;
 }
-
+//Get Votable Balance if the Votable Address exists in the VodableAddressMap
 CoinToken.prototype.getVotableBalance = function() {
     var totalBalance = 0;
     for (idx in this._votableAddresses) {
@@ -580,6 +577,7 @@ CoinToken.prototype.refreshIfNecessary = function() {
     }
 }
 
+//Identify whether account balance is greater than minimum balance.If yes then it can be contributed to Spendable Balance
 CoinToken.prototype.getSpendableBalance = function(minimumValue) {
 //    return 123456789123456789123456;
     if (typeof(minimumValue) === 'undefined' || minimumValue === null) {
@@ -662,7 +660,7 @@ CoinToken.prototype.getShiftsNecessary = function(minimumValue) {
     var spendableBalance = this.getSpendableBalance(minimumValue)
     return this._numShiftsNecessary;
 }
-
+//Determine whether the account has InsufficientGas for Spendable
 CoinToken.prototype.hasInsufficientGasForSpendable = function(gasLimit) {
     if (typeof(gasLimit) === 'undefined' || gasLimit === null) {
         gasLimit = this._gasLimit;
@@ -682,7 +680,7 @@ CoinToken.prototype.hasBlockedForSpendable = function() {
         return false;
     }
 }
-
+//get transferable balance
 CoinToken.prototype.getPouchFoldBalance = function() {
 //    return 123456789123456789123456;
     return this.getTransferableBalance();
@@ -693,11 +691,11 @@ CoinToken.prototype._notify = function(reason) {
         this._listeners[i](CoinToken.getTokenToMainTypeMap(this._tokenCoinType));
     }
 }
-
+//To add Listener
 CoinToken.prototype.addListener = function(callback) {
     this._listeners.push(callback);
 }
-
+//Remove Listener
 CoinToken.prototype.removeListener = function(callback) {
     for (var i = this._listeners.length - 1; i >= 0; i--) {
         if (this._listeners[i] === callback) {
@@ -705,7 +703,7 @@ CoinToken.prototype.removeListener = function(callback) {
         }
     }
 }
-
+//Get Current Receive Address for the Coin Holder Type
 CoinToken.prototype.getCurrentReceiveAddress = function() {
     var address = this._currentReceiveAddress;
 
@@ -715,7 +713,7 @@ CoinToken.prototype.getCurrentReceiveAddress = function() {
 
     return address;
 }
-
+//Generate QR Code
 CoinToken.prototype.generateQRCode = function(largeFormat, coinAmountSmallType) {
     var uri = "";
 
@@ -822,7 +820,7 @@ CoinToken.prototype.getAccountNonBlockedBalance = function(address) {
 
     return nonBlockedBalance;
 }
-
+//Sort the Highest Accounts after updating any New Transaction
 CoinToken.prototype.sortHighestAccounts = function(ethereumPouch, ethGasPrice, ethGasLimit) {
     var baseTXCost = ethGasPrice.mul(ethGasLimit).toNumber();
 
@@ -911,6 +909,7 @@ CoinToken.prototype.getHighestAccountBalanceAndIndex = function(ethereumPouch, e
 
     return (this._sortedHighestAccountArray.length > 0) ? this._sortedHighestAccountArray[0] : null;
 }
+//Add Transaction to Ethereum Transaction Listener
 
 CoinToken.prototype.buildERC20EthereumTransactionList = function(ethereumPouch, toAddress, amount_smallUnit, gasPrice, gasLimit, ethereumTXDataPrePendArray, doNotSign) {
     var amountDao = parseInt(amount_smallUnit);
